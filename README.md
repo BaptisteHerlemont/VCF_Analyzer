@@ -1,92 +1,98 @@
 # VCF File Analyzer
 
-This project provides a script for analyzing Variant Call Format (VCF) files to extract detailed information by sites and genotypes. It leverages a Python script embedded within a Quarto (R) script to examine the VCF file, generate output files, and then analyze these files to create an HTML report featuring various statistics, tables, and figures.
+This project is a **Quarto report** designed to run in **RStudio**. It combines **Python** (for parsing the VCF) and **R** (for tables and plots) to produce an HTML report.  
+The focus is a **first-pass QC on missing data** in a multi-sample VCF (many individuals, many sites).
 
 ## Features
 
-- **VCF File Analysis:** Utilizes `cyvcf2` to read and analyze VCF data.
-- **Report Generation:** Produces HTML reports including statistics, tables, and figures based on the analysis.
-- **Python and R Integration:** Combines Python's analysis capabilities with R's visualization and reporting tools.
+- **Missingness at site and genotype level** (SNP vs INDEL).
+- **Quick summary tables** for the most problematic genotypes.
+- **Clear visual overview** to spot outliers and set thresholds.
 
 ## Prerequisites
 
-To use this project, you will need the following installed on your system:
+You can run the report directly in RStudio (local install) or use Docker.
 
-(Versions of the programs used during development)
+**Local setup (RStudio):**
+- Python 3.10+
+- R 4.1+
+- Quarto (via RStudio)
+- Python package `cyvcf2`
+- R packages listed below
 
-- Python 3.10.13
-- R 4.1.2 
-- Quarto (RStudio)
-- The Python package `cyvcf2`
-- Necessary R libraries for data processing and report generation
+**Docker option (recommended):**  
+Use the prebuilt image `nutui/vcf-analyzer` which includes everything.
 
 ## Installation
 
-1. Clone the repository to your local machine:
+1. Clone the repository:
 
-    ```bash
-    git clone https://github.com/BaptisteHerlemont/VCF_Analyzer-.git
-    ```
-*You can simply download the file `vcf.qmd` without using Git.*
+```bash
+git clone https://github.com/BaptisteHerlemont/VCF_Analyzer-.git
+```
 
-2. Install Python dependencies:
+2. Install Python dependency:
 
-    ```bash
-    pip3 install cyvcf2
-    ```
+```bash
+pip3 install cyvcf2
+```
 
-3. Ensure you have the required R dependencies installed.
-
-
-The analysis relies on various R libraries. You can install these libraries by running the following commands in your R console or RStudio:
+3. Install R packages (run in RStudio):
 
 ```r
-install.packages("ggplot2")
-install.packages("dplyr")
-install.packages("knitr")
-install.packages("MetBrewer")
-install.packages("tidyr")
-install.packages("plotly")
-install.packages("viridis")
-install.packages("reticulate") 
+install.packages(c(
+  "ggplot2", "dplyr", "knitr", "MetBrewer",
+  "tidyr", "plotly", "viridis", "reticulate"
+))
 ```
-If you encounter no errors, you're ready to proceed with the analysis.
+
+## Docker (RStudio Server)
+
+This Docker image includes **R**, **Python**, **Quarto**, `cyvcf2`, and all required R packages.  
+It lets anyone open RStudio in the browser and render `vcf.qmd` without local installs.
+
+**Pull and run RStudio Server:**
+```bash
+docker pull nutui/vcf-analyzer:latest
+docker run --rm -p 8787:8787 \
+  -v "$(pwd)":/home/rstudio/project \
+  nutui/vcf-analyzer:latest
+```
+
+Then open `http://localhost:8787` in your browser (no login required).
+Use only on trusted/local machines (authentication is disabled).
+
 
 
 ## Usage
 
-To start the analysis and generate the report, follow these steps:
+1. Put your VCF in the same folder as `vcf.qmd`.
+2. Open `vcf.qmd` in RStudio and edit the file names in the setup chunk:
 
-1. Ensure the Quarto script is in the same directory as your VCF file.
-2. Open the Quarto script in RStudio. You can modify the names of the input and output files within the script as shown below:
+```r
+{r setup, include=FALSE}
+input_vcf_file <- "YourInputFileName.vcf.gz"
+output_csv_file_bySite <- "OutputFileNameBySite.tsv"
+output_csv_file_byGeno <- "OutputFileNameByGeno.tsv"
+```
 
-    ```r
-    {r setup, include=FALSE}
-    input_vcf_file <- "YourInputFileName.vcf.gz"  # Change "YourInputFileName.vcf.gz" to the name of your VCF file
-    output_csv_file_bySite <- "OutputFileNameBySite.csv"  # Change "OutputFileNameBySite.csv" to your desired output file name for site data
-    output_csv_file_byGeno <- "OutputFileNameByGeno.csv"  # Change "OutputFileNameByGeno.csv" to your desired output file name for genotype data
-    ```
+3. Render the report (Knit/Render).  
+The script will:
 
-    Replace `YourInputFileName.vcf.gz`, `OutputFileNameBySite.csv`, and `OutputFileNameByGeno.csv` with the actual names of your files.
+- parse the VCF in **Python** (`cyvcf2`)
+- write two TSVs: per-site and per-genotype
+- read them in **R** and generate plots + tables
 
-3. After setting up the file names, run the Quarto script to perform the analysis. The generated HTML report and CSV files will be available in the output directory.
+The HTML report and TSV files are written to the project folder.
 
-*Note: All figures generated in the report are colorblind friendly, ensuring accessibility for all users.*
-
-
-## Contributing
-
-Contributions to this project are welcome. If you wish to contribute, please fork the repository, create a branch for your changes, and submit a pull request.
-
-
-## Contact
-
-For any questions or suggestions, feel free to open an issue in the GitHub repository.
-
-## How to Cite
-
-If you use this tool in your research, please include the following citation in your work:
-
-Herlemont Baptiste.2024.Vcf Analyzer.https://github.com/BaptisteHerlemont/VCF_Analyzer-. License: MIT License.
+**Tip:** This report is most useful for VCFs with multiple individuals and sites, where missingness varies across genotypes.  
+For a quick demo, you can use the included example file `synthetic_20ind_10k.vcf`.  
+This example file comes from the repository `BaptisteHerlemont/Fake_bioinfo_data_maker`: https://github.com/BaptisteHerlemont/Fake_bioinfo_data_maker
 
 
+## Report Preview
+
+Below is a compact overview of the figures you can expect.  
+The file `docs/report-overview.png` can be used as an example screenshot to show what the script produces.
+
+![Report overview](docs/report-overview.png)

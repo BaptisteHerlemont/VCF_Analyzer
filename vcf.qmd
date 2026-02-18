@@ -28,14 +28,14 @@ library(reticulate)
 ```
 
 ```{r setup, include=FALSE}
-input_vcf_file <- "YourInputFileName.vcf.gz"  # Change "YourInputFileName.vcf.gz" to the name of your VCF file
-output_csv_file_bySite <- "OutputFileNameBySite.csv"  # Change "OutputFileNameBySite.csv" to your desired output file name for site data
-output_csv_file_byGeno <- "OutputFileNameByGeno.csv"  # Change "OutputFileNameByGeno.csv" to your desired output file name for genotype data
+input_vcf_file <- "synthetic_20ind_10k.vcf"  # Change "YourInputFileName.vcf.gz" to the name of your VCF file
+output_csv_file_bySite <- "synthetic_20ind_10k_by_site.tsv"  # Change "OutputFileNameBySite.csv" to your desired output file name for site data
+output_csv_file_byGeno <- "synthetic_20ind_10k_by_geno.tsv"  # Change "OutputFileNameByGeno.csv" to your desired output file name for genotype data
 
 
 ```
 
-```{python VCF, eval=FALSE, include=FALSE}
+```{python VCF, eval=TRUE, include=FALSE}
 
 import cyvcf2
 
@@ -143,28 +143,28 @@ cat("For the file", file2_name, ":\n")
 cat("Number of rows :", file2_dim[1], "\n")
 cat("Number of columns :", file2_dim[2], "\n")
 
-file2_dim_value <- file2_dim[2]
+file2_dim_value <- file2_dim[1]
 file1_dim_value <- file1_dim[1]
 
 ```
-To summarize, for the VCF file, there are **`r file2_dim_value`** genotypes and **`r file1_dim_value`** sites in total.
+To summarize, this VCF file contains **`r file2_dim_value`** genotypes and **`r file1_dim_value`** sites in total.
 
 
 
 
-### You can visualize the file with genotype-specific information below:
+### Genotype-level preview
 ```{r, table_genotype, echo=FALSE}
 #table <- file_genotypes %>%
  # mutate(Genotype = as.factor(Genotype)) %>%
   #select(Genotype, SNP_missing, INDEL_missing)
 kable(head(file_genotypes,20))
 ```
-### You can visualize the file with site-specific information below:
+### Site-level preview
 ```{r, table_site, echo=FALSE}
 kable(head(file_sites,20))
 ```
-## Visualization of Site statistics 
-The total number of references is not displayed on the graph
+## Site-Level Statistics
+Note: The reference count is not displayed on the bar chart.
 
 ```{r, distribution, echo=TRUE}
 
@@ -177,11 +177,11 @@ totals <- file_sites %>%
 ggplot(totals, aes(x = Variable, y = Total/1e6, fill = type)) +
   geom_bar(stat = "identity", position = "dodge") +
   geom_text(aes(label = paste("n:", scales::comma(Total, big.mark = " "))), position = position_dodge(width = 0.9), vjust = -0.5) +
-  labs(title = "Representation of the total occurrence count",
-       x = "",
-       y = "Total number (in millions)") +
-  scale_fill_met_d("Veronese") +
-  theme_minimal()
+  labs(title = "Total calls across sites",
+       x = "Call category",
+       y = "Total count (millions)") +
+  scale_fill_manual(values = c("snp" = "#0072B2", "indel" = "#E69F00"), name = "Variant type") +
+  theme_minimal() + theme(panel.grid = element_blank())
 ```
 
 
@@ -192,25 +192,24 @@ Cassat2_INDELHET_color <- Cassat2_Scale8_color[6]
 boxplotsnp <-Cassat2_Scale8_color[10]
 boxplotindel <- Cassat2_Scale8_color[1]
 
-ggplot(file_sites, aes(x = type, y = het, fill = type)) +
-  geom_violin(position = "dodge", alpha = 0.6, ) +
-  geom_boxplot(width = 0.1, color = c(snp = boxplotsnp, indel = boxplotindel), alpha = 1, outlier.shape = NA, show.legend = FALSE) +
-  scale_fill_manual(values = c("snp" = Cassat2_SNPHET_color, "indel" = Cassat2_INDELHET_color), name = "") +
-  xlab("Variant Type") +
-  ylab("Number of Heterozygous Alleles per Site") +
-  labs(title = "Distribution of Heterozygous Alleles by Variant Type") +
-  theme_minimal()
+ ggplot(file_sites, aes(x = type, y = het, fill = type)) +
+    geom_violin(position = "dodge", alpha = 0.6) +
+    geom_boxplot(aes(color = type), width = 0.1, alpha = 1, outlier.shape = NA, show.legend = FALSE) +
+    scale_fill_manual(values = c("snp" = Cassat2_SNPHET_color, "indel" = Cassat2_INDELHET_color), name = "Variant type") +
+    scale_color_manual(values = c("snp" = boxplotsnp, "indel" = boxplotindel), guide = "none") +
+    xlab("Variant type") +
+    ylab("Heterozygous calls per site") +
+    labs(title = "Distribution of heterozygous calls by variant type") +
+    theme_minimal() + theme(panel.grid = element_blank())
 
 
 
 ```
 
 
-## Visualization of Genotype statistics 
-Representation of missing alleles according to genotypes
-
-
-**This type of chart can be useful for selecting individuals of interest**
+## Genotype-Level Statistics
+### Missing calls by genotype (circular view)
+This circular chart helps highlight genotypes with elevated missingness.
 ```{r, circular_plot, echo=TRUE, warning=FALSE}
 data <- file_genotypes %>%
   mutate(Genotype = as.factor(Genotype)) %>%
@@ -234,7 +233,7 @@ ggplot(data, aes(x = Genotype)) +
   geom_bar(aes(y = SNP_missing, fill = "SNP"),width = 1.1, stat = "identity", position = position_dodge(width = 1.1), alpha = 0.9) +
   geom_bar(aes(y = INDEL_missing, fill = "INDEL"), width = 1.1, stat = "identity", position = position_dodge(width = 1.1), alpha = 0.9) +
   ylim(-max_value, max_value) +
-  theme_minimal() +
+  theme_minimal() + theme(panel.grid = element_blank()) +
   theme(
     axis.text = element_blank(),
     axis.title = element_blank(),
@@ -245,13 +244,13 @@ ggplot(data, aes(x = Genotype)) +
   coord_polar(start = 0) +
   scale_fill_manual(
     values = c(SNP = Troy_SNP_color, INDEL = Java_INDEL_color),
-    name = "Type",
+    name = "Variant type",
     labels = c("SNP" = "SNP", "INDEL" = "INDEL")
   )} else if (has_snp) {
     ggplot(data, aes(x = Genotype)) +
       geom_bar(aes(y = SNP_missing, fill = "SNP"), width = 1.1, stat = "identity", position = position_dodge(width = 1.1), alpha = 0.9) +
       ylim(-max_value, max_value) +
-      theme_minimal() +
+      theme_minimal() + theme(panel.grid = element_blank()) +
       theme(
         axis.text = element_blank(),
         axis.title = element_blank(),
@@ -260,12 +259,12 @@ ggplot(data, aes(x = Genotype)) +
         legend.margin = margin(c(0, 50, 0, 0))
       ) +
       coord_polar(start = 0) +
-      scale_fill_manual(values = c(SNP = Troy_SNP_color), name = "Type", labels = c("SNP" = "SNP"))
+      scale_fill_manual(values = c(SNP = Troy_SNP_color), name = "Variant type", labels = c("SNP" = "SNP"))
 } else if (has_indel) {
     ggplot(data, aes(x = Genotype)) +
       geom_bar(aes(y = INDEL_missing, fill = "INDEL"), width = 1.1, stat = "identity", position = position_dodge(width = 1.1), alpha = 0.9) +
       ylim(-max_value, max_value) +
-      theme_minimal() +
+      theme_minimal() + theme(panel.grid = element_blank()) +
       theme(
         axis.text = element_blank(),
         axis.title = element_blank(),
@@ -274,7 +273,7 @@ ggplot(data, aes(x = Genotype)) +
         legend.margin = margin(c(0, 50, 0, 0))
       ) +
       coord_polar(start = 0) +
-      scale_fill_manual(values = c(INDEL = Java_INDEL_color), name = "Type", labels = c("INDEL" = "INDEL"))
+      scale_fill_manual(values = c(INDEL = Java_INDEL_color), name = "Variant type", labels = c("INDEL" = "INDEL"))
 }
 
 
@@ -303,7 +302,8 @@ if (!has_snp & has_indel) {
 }
 ```
 
-**This type of ordered chart can be useful for determining a selection threshold**
+### Missing calls by genotype (ordered view)
+This ordered chart is useful for choosing a filtering threshold.
 ```{r, barplot, echo=TRUE}
 
 Derain_SNPMISSING_color <- met.brewer(name = "Derain", n = 1)
@@ -337,13 +337,13 @@ ggplot(file_genotypes, aes(x = Genotype)) +
   geom_vline(aes(xintercept = genotype90, color = "90%"), linetype = "solid", linewidth = 1) +
   geom_vline(aes(xintercept = genotype80, color = "80%"), linetype = "solid", linewidth = 1) +
   geom_vline(aes(xintercept = genotype70, color = "70%"), linetype = "solid", linewidth = 1) +
-  theme_minimal() +
-  ggtitle("SNP_missing and INDEL_missing by Genotype") +
-  labs(x = "Genotype", y = "Number of Occurrences") +
-  scale_fill_manual(values = c(SNP_Missing = Derain_SNPMISSING_color, INDEL_Missing = Morgenstern_INDELMISSING_color), name = "Category") +
+  theme_minimal() + theme(panel.grid = element_blank()) +
+  ggtitle("Missing calls by genotype") +
+  labs(x = "Genotype", y = "Missing calls") +
+  scale_fill_manual(values = c(SNP_Missing = Derain_SNPMISSING_color, INDEL_Missing = Morgenstern_INDELMISSING_color), name = "Missing type") +
   scale_color_manual(values = c("90%" = ARCHAMBAULT_Yellow_Color, "80%" = ARCHAMBAULT_OrangeColor, "70%" = ARCHAMBAULT_Red_Color), name = "Threshold") +
   guides(
-    fill = guide_legend(title = "Type", direction = "vertical"),
+    fill = guide_legend(title = "Missing type", direction = "vertical"),
     color = guide_legend(title = "Threshold", direction = "vertical")
   ) +
   theme(
@@ -363,10 +363,10 @@ ggplot(file_genotypes, aes(x = Genotype)) +
     geom_vline(aes(xintercept = genotype90_indel, color = "90% Threshold"), linetype = "solid", linewidth = 1.5) +
     geom_vline(aes(xintercept = genotype80_indel, color = "80% Threshold"), linetype = "solid", linewidth = 1.5) +
     geom_vline(aes(xintercept = genotype70_indel, color = "70% Threshold"), linetype = "solid", linewidth = 1.5) +
-    theme_minimal() +
-    ggtitle("INDEL_missing by Genotype") +
-    labs(x = "", y = "Number of Occurrences") +
-    scale_fill_manual(values = c(INDEL_Missing = Morgenstern_INDELMISSING_color), name = "Category") +
+    theme_minimal() + theme(panel.grid = element_blank()) +
+    ggtitle("Missing INDEL calls by genotype") +
+    labs(x = "Genotype", y = "Missing calls") +
+    scale_fill_manual(values = c(INDEL_Missing = Morgenstern_INDELMISSING_color), name = "Missing type") +
     scale_color_manual(values = c("90% Threshold" = ARCHAMBAULT_Yellow_Color, 
                                   "80% Threshold" = ARCHAMBAULT_OrangeColor, 
                                   "70% Threshold" = ARCHAMBAULT_Red_Color), 
@@ -383,7 +383,7 @@ ggplot(file_genotypes, aes(x = Genotype)) +
 ```
 
 ```{r, barplot_table, echo=FALSE}
-cat("You can observe the total number and the genotypes that exceed various thresholds")
+cat("Summary of genotypes exceeding different missingness thresholds")
 
 total_rows <- nrow(file_genotypes)
 
@@ -407,9 +407,47 @@ if (has_snp) {
                       Total = nrow(filtered_data),
                       Genotype = toString(filtered_data$Genotype)))
   })
+} else {
+  summary_data <- NULL
 }
 
-summary_table <- do.call(rbind, summary_data)
-
-kable(summary_table)
+if (is.null(summary_data)) {
+  cat("No missing SNP or INDEL values to summarize.")
+} else {
+  summary_table <- do.call(rbind, summary_data)
+  kable(summary_table)
+}
 ```
+
+### Missing rate per site
+```{r, missing_rate_per_variant, echo=TRUE}
+  file_sites_missing <- file_sites %>%
+    mutate(
+      total = ref + alt + het + missing,
+      missing_rate = ifelse(total > 0, missing / total, NA)
+    )
+
+  ggplot(file_sites_missing, aes(x = missing_rate)) +
+    geom_histogram(bins = 50, fill = met.brewer(name = "Java", n = 1), color = "white") +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+    labs(
+      title = "Missing rate per site",
+      x = "Missing rate",
+      y = "Number of sites"
+    ) +
+    theme_minimal() + theme(panel.grid = element_blank())
+```
+
+### Missing rate per site by variant type
+```{r, missing_rate_per_variant_by_type, echo=TRUE}
+  ggplot(file_sites_missing, aes(x = missing_rate, fill = type)) +
+    geom_histogram(bins = 40, position = "stack", alpha = 1, color = NA) +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+    scale_fill_manual(values = c("snp" = "#0072B2", "indel" = "#E69F00"), name = "Variant type") +
+    labs(
+      title = "Missing rate per site by variant type",
+      x = "Missing rate",
+      y = "Number of sites"
+    ) +
+    theme_minimal() + theme(panel.grid = element_blank())
+```    
